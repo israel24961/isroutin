@@ -1,11 +1,11 @@
-// @ts-nocheck
+//@ts-nocheck
 "use client"
 import { useRef, useState, useMemo, StrictMode, useCallback } from 'react';
-import { useMap, MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
+import { Tooltip, useMap, MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet'
 
-function Coolbutton({ msgs, clicks }:{msgs:any,clicks:any}) {
+function Coolbutton({ msgs, clicks }: { msgs: string[], clicks: any[] }) {
   let buttons = []
   for (let i = 0; i < msgs.length; i++) {
     buttons.push(
@@ -30,19 +30,34 @@ function go_to_madrid() {
 // function BaseStation({ position, radius }:{ position:L.Point, radius:number}) {
 //
 //   return (<>
-//     <Circle center={position} pathOptions={{ color: 'red' }} radius={radius} />
 //     <DraggableMarker posi={position : } />
 //   </>);
 // }
 
-export default function LeafletMap({ dark, className }) {
+export default function LeafletMap({ dark, className }: { dark: boolean, className: string }) {
   console.log("Leaf called")
   const position: [number, number] = [51.505, -0.09]; // Replace with your desired initial coordinates
   const leaf: L.Map = useRef(null)
   const [AMarkers, setAMarkers] = useState(new Array)
 
+  const add_c = () => {
+    console.log(leaf.current.getCenter())
+    setAMarkers(AMarkers.map(
+      (c, i) => {
+        if (i === AMarkers.length - 1) {
+          return { posi: c.posi, circle:1000 }
+        } else {
+          return c;
+        }
+      }
+    ));
+    AMarkers.forEach(element => {
+      console.log(element)
+    });
+  }
   const add_bs = () => {
     console.log(leaf.current.getCenter())
+
     setAMarkers(AMarkers.concat([{ posi: leaf.current.getCenter() }]))
     AMarkers.forEach(element => {
       console.log(element)
@@ -52,18 +67,22 @@ export default function LeafletMap({ dark, className }) {
     setAMarkers(AMarkers.map(
       (c, i) => {
         if (i === id) {
-          return {posi:pos}
+          return { posi: pos }
         } else {
           return c;
         }
-        }
+      }
     ));
   }
-  const mod_RemoveLast=()=>{
-    setAMarkers(AMarkers.slice(0,AMarkers.length-1));
+  const mod_RemoveLast = () => {
+    setAMarkers(AMarkers.slice(0, AMarkers.length - 1));
   }
   const htmlAMarkers = AMarkers.map((obj, i) => {
-    return <DraggableMarker key={i} posi={obj.posi} callbck={(p) => mod_PosMarker(i, p)} />
+    if (obj.circle != null) {
+      return <CircleMarker key={i} posi={obj.posi} radius={obj.circle} callbck={() => "xd"} />
+    }
+    else
+      return <DraggableMarker key={i} posi={obj.posi} callbck={(p) => mod_PosMarker(i, p)} />
   })
   const resp = (
     <StrictMode>
@@ -74,69 +93,16 @@ export default function LeafletMap({ dark, className }) {
         />
         {htmlAMarkers}
       </MapContainer>
-      <Coolbutton msgs={["Add a base station", "Undo add","Reset base stations"]} clicks={[add_bs,mod_RemoveLast,go_to_madrid]} />
+      <Coolbutton msgs={["Add a base station", "Undo add", "Add coverage", "Reset base stations"]} clicks={[add_bs, mod_RemoveLast, add_c, go_to_madrid]} />
     </StrictMode>
   );
   return resp;
 };
-function DraggableMarker({ posi, callbck }) {
-  console.log("draggable marker");
-
-  const bigIcon = new L.Icon(
-    {
-      iconUrl: 'marker-icon_hover.png',
-      shadowUrl: 'marker-shadow.png',
-
-      iconSize: [38, 95], // size of the icon
-      shadowSize: [50, 64], // size of the shadow
-      iconAnchor: [22, 94], // point of the icon which will correspond to marker's location
-      shadowAnchor: [4, 62],  // the same for the shadow
-      popupAnchor: [-3, -76] // point from which the popup should open relative to the iconAnchor
-    }
-  )
-  const normalIcon = new L.Icon.Default()
-  const [draggable, setDraggable] = useState(false)
-  const markerRef = useRef(null)
-  const toggleDraggable = useCallback((dra) => {
-    const marker: L.Marker = markerRef.current
-    if (dra) {
-      // console.log("normalIcong " + dra)
-      marker.setIcon(normalIcon)
-    }
-    else {
-      // console.log("bigIcon " + dra)
-      marker.setIcon(bigIcon)
-    }
-
-    setDraggable((d) => !d)
-
-  }, [bigIcon,normalIcon])
-  const [opac, setopac] = useState(1)
-  const eventHandlers = useMemo(
-    () => ({
-      dragend() {
-        console.log("dragend hit")
-        if (markerRef.current === null)
-          return;
-        const marker: L.Marker = markerRef.current
-        if (marker != null) {
-          callbck(marker.getLatLng())
-        }
-      },
-      click() {
-        toggleDraggable(draggable)
-      },
-      mouseover() {
-        setopac(0.5)
-      },
-      mouseout() {
-        setopac(1)
-      }
-    }),
-    [draggable,callbck],
-  )
-
-  const mm = <Marker
+// icon → draggable icon → circle
+//  ↑                         ↓
+//  --------------------------
+function NormalMarker({ posi, callbck }) {
+  <Marker
     draggable={draggable}
     eventHandlers={eventHandlers}
     position={posi}
@@ -144,6 +110,85 @@ function DraggableMarker({ posi, callbck }) {
     opacity={opac}
   >
   </Marker>;
+
+}
+function CircleMarker({ posi, radius, callbck }) {
+  return <Circle center={posi} pathOptions={{ color: 'red' }} radius={radius} />
+}
+function DraggableMarker({ posi, callbck }) {
+
+  const normalIcon = new L.Icon(
+    {
+      iconUrl: 'marker-icon.png',
+      shadowUrl: 'marker-shadow.png',
+      className: "hover:opacity-50",
+
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      tooltipAnchor: [16, -28],
+      shadowSize: [41, 41]
+    }
+  )
+  const [curIcon, setcurIcon] = useState(normalIcon)
+  const bigIcon = new L.Icon(
+    {
+      iconUrl: 'marker-icon.png',
+      shadowUrl: 'marker-shadow.png',
+      className: "hover:opacity-50 animate-pulse",
+
+      // iconSize: [45, 60 ],
+      // iconAnchor: [12, 41],
+      // popupAnchor: [1, -34],
+      // tooltipAnchor: [16, -28],
+      // shadowSize: [41, 41]
+    }
+  )
+  const [draggable, setDraggable] = useState(false)
+  const markerRef = useRef(null)
+  const toggleDraggable = useCallback((dra) => {
+    if (dra) {
+      setcurIcon(normalIcon)
+    }
+    else {
+      setcurIcon(bigIcon)
+    }
+    setDraggable((d) => !d)
+
+  }, [curIcon])
+  const eventHandlers = useMemo(
+    () => ({
+      dragend() {
+        console.log("dragend hit")
+        if (markerRef.current === null)
+          return;
+        const marker: L.Marker = markerRef.current
+        console.log(marker.getLatLng());
+
+        if (marker != null) {
+          callbck(marker.getLatLng())
+        }
+      },
+      click() {
+        toggleDraggable(draggable)
+      },
+      // mouseover() {
+      //   setopac(0.5)
+      // },
+      // mouseout() {
+      //   setopac(1)
+      // }
+    }),
+    [draggable, callbck],
+  )
+  const mm = <Marker
+    draggable={draggable}
+    eventHandlers={eventHandlers}
+    position={posi}
+    ref={markerRef}
+    icon={curIcon}><Tooltip>
+      {draggable ? "You can move this now" : "Click to enable movement"}
+    </Tooltip></Marker>;
   return mm;
 }
 
