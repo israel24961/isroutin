@@ -19,3 +19,9 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## TODO
+
+- Retrieve roads from osm ✅
+    - check performance (less bigger queries or many smaller ones)
+- Path solving 🏗️
