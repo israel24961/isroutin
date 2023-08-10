@@ -39,3 +39,10 @@ body {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
 }
+
+.lineleaf{
+  stroke-width:5;
+}
+.lineleaf:hover{
+  stroke-width:10;
+}
